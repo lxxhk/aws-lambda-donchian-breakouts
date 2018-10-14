@@ -1,0 +1,51 @@
+
+service: breakouts # NOTE: update this with your service name
+
+provider:
+  name: aws
+  runtime: python3.6
+  profile: ${file(../config.${self:provider.stage}.json):breakouts.profile}
+  stage: dev
+  region: us-east-1
+  iamRoleStatements:
+   - Effect: "Allow"
+     Action: "lambda:InvokeFunction"
+     Resource: "*"
+   - Effect: "Allow"
+     Action: "dynamodb:PutItem"
+     Resource: ${self:custom.breakoutTableArn}
+
+  environment:
+    INVOKED_FUNCTION_NAME: ${self:functions.breakout_lambda.name}
+    BREAKOUT_DBTABLE_NAME: ${self:custom.breakoutsTableName}
+    BREAKOUT_BUCKETDATA_NAME: ${self:custom.breakoutsBucketName}
+    BREAKOUT_SYMBOLS_KEY_NAME: ${self:custom.breakoutsSymbolsFileName}
+
+custom:
+  breakoutsTableName: ${file(../config.${self:provider.stage}.json):breakouts.breakoutstable}
+  breakoutsBucketName: ${file(../config.${self:provider.stage}.json):breakouts.bucketfordata}
+  breakoutsSymbolsFileName: ${file(../config.${self:provider.stage}.json):breakouts.keyforsymbols}
+  breakoutTableArn:
+    Fn::Join:
+      - ':'
+      - - arn
+        - aws
+        - dynamodb
+        - Ref: AWS::Region
+        - Ref: AWS::AccountId
+        - table/${self:custom.breakoutsTableName}
+  pythonRequirements:
+    pythonBin: /usr/local/bin/python3.6m
+
+functions:
+  trigger_breakout_lambdas:
+    handler: triggerbreakoutlambdas.trigger_breakout_lambdas
+    description: lambda function to trigger individual breakout lambda functions
+    name: ${self:service}-${self:provider.stage}-trigger_breakout_lambdas
+  breakout_lambda:
+    handler: breakoutlambda.breakout_lambda
+    description: lambda function to calculate and alert pending breakouts
+    name: ${self:service}-${self:provider.stage}-breakout_lambda
+
+plugins:
+  - serverless-python-requirements
