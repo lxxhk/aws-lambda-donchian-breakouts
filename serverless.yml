@@ -29,11 +29,13 @@ provider:
     BREAKOUT_DBTABLE_NAME: ${self:custom.breakoutsTableName}
     BREAKOUT_BUCKETDATA_NAME: ${self:custom.breakoutsBucketName}
     BREAKOUT_SYMBOLS_KEY_NAME: ${self:custom.breakoutsSymbolsFileName}
+    BREAKOUT_CRITERIA_KEY_NAME: ${self:custom.breakoutsCriteriaFileName}
 
 custom:
   breakoutsTableName: ${file(../config.${self:provider.stage}.json):breakouts.breakoutstable}
   breakoutsBucketName: ${file(../config.${self:provider.stage}.json):breakouts.bucketfordata}
   breakoutsSymbolsFileName: ${file(../config.${self:provider.stage}.json):breakouts.keyforsymbols}
+  breakoutsCriteriaFileName: ${file(../config.${self:provider.stage}.json):breakouts.keyforcriteria}
   writetobucketArn:
     Fn::Join:
       - ':'

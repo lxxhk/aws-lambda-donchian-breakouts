@@ -18,6 +18,11 @@ dbtable = os.environ['BREAKOUT_DBTABLE_NAME']
 dydbsc = boto3.client('dynamodb')
 dydbsr = boto3.resource('dynamodb')
 table = dydbsr.Table(dbtable)
+
+s3sr = boto3.resource('s3')
+key_criteria = os.environ['BREAKOUT_CRITERIA_KEY_NAME']
+bucket_criteria = os.environ['BREAKOUT_BUCKETDATA_NAME']
+
 item_data_dict = ''
 entry_exit_dict = ''
 root = ''
@@ -92,11 +97,11 @@ def package_upload_data(direction):
     packaged_data = entry_exit_dict
     # print("packaged_data:", packaged_data)
     packaged_data['type'] = duration
-    packaged_data['risk'] = str(url_payload['criteria']['risk'])
-    packaged_data['min_volume'] = str(url_payload['criteria']['min_volume'])
-    packaged_data['equity'] = str(url_payload['criteria']['equity'])
-    packaged_data['breakout_days'] = str(url_payload['criteria']['breakout_days'])
-    packaged_data['unit_size_cutoff'] = str(url_payload['criteria']['unit_size_cutoff'])
+    packaged_data['risk'] = str(risk)
+    packaged_data['min_volume'] = str(min_volume)
+    packaged_data['equity'] = str(equity)
+    packaged_data['breakout_days'] = str(breakout_days)
+    packaged_data['unit_size_cutoff'] = str(unit_size_cutoff)
     packaged_data['direction'] = direction
     packaged_data['tradingDay'] = last_tradingDay
     packaged_data['symbol'] = symbol
@@ -165,8 +170,8 @@ def make_item(data):
 # ------------------------------- LAMBDA HANDLER ---------------------------------
 def breakout_lambda(event, context):
     global last_don_lband, last_atr, last_open, last_high, last_low, last_close
-    global last_tradingDay, symbol, last_volume, unit_size, breakout_days, url_payload, chart_url
-    global duration
+    global last_tradingDay, symbol, last_volume, unit_size, breakout_days, eval_criteria_dict, chart_url
+    global duration, unit_size_cutoff, min_volume, risk, equity
 
     # event is the json passed by the Payload parameter of the first lambda function
     # event example: {"market" : "ES*1", "maxRecords" : 100, "type" : "daily"}
@@ -178,18 +183,16 @@ def breakout_lambda(event, context):
     maxRecords = str(event['maxRecords'])
     duration = event['type']
 
+    obj =s3sr.Object(bucket_criteria, key_criteria)
+    criteria = obj.get()['Body'].read().decode('utf-8')
 
-    url_payload = {'criteria': {'min_volume': 400,
-                                'risk': 2.0,
-                                'equity': 250000,
-                                'breakout_days': 20,
-                                'unit_size_cutoff': 0.8}}
+    eval_criteria_dict = json.loads(criteria)
 
-    min_volume = url_payload['criteria']['min_volume']
-    risk = url_payload['criteria']['risk'] / 100
-    breakout_days = url_payload['criteria']['breakout_days']
-    equity = url_payload['criteria']['equity']
-    unit_size_cutoff = url_payload['criteria']['unit_size_cutoff']
+    min_volume = int(eval_criteria_dict['min_volume'])
+    risk = float(eval_criteria_dict['risk']) / 100
+    breakout_days = int(eval_criteria_dict['breakout_days'])
+    equity = float(eval_criteria_dict['equity'])
+    unit_size_cutoff = float(eval_criteria_dict['unit_size_cutoff'])
 
     url = 'https://marketdata.websol.barchart.com/getHistory.json?\
     apikey=020e9823c98a0753c62aacb0735a5226&symbol=' + market + '&type=' + duration + '&\
