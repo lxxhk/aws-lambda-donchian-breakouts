@@ -10,6 +10,7 @@ from ta import donchian_channel_hband, donchian_channel_lband, average_true_rang
 import requests
 import boto3
 from futuresdefinitions import futurespecs
+from writehtml import writedata
 
 # breakout lambda based on fixed 55 day breakout of donchian channels
 # can make this more variable in the future (20 vs 55 vs ??)
@@ -25,11 +26,14 @@ packaged_data = ''
 # initialize object for getting futures specifications
 cs = futurespecs()
 
+# initialize object for writing html of entry/exit to s3
+wf = writedata()
 
+# --------------------------------------------------------------------------------
 def roundto(number, base, places):
     return round(base*round(number/base), places)
 
-
+# --------------------------------------------------------------------------------
 def get_entry_exit(direction, breakout_price):
     global entry_exit_dict, entry_exit_str, tick
     tick = float(cs.get_contract_info(root)[3])
@@ -69,7 +73,7 @@ def get_entry_exit(direction, breakout_price):
     print(entry_exit_dict)
     return entry_exit_dict
 
-
+# --------------------------------------------------------------------------------
 def item_expiration(incr):
     time_increments_in_seconds = """{
         "plus_minute" : 60,
@@ -82,7 +86,7 @@ def item_expiration(incr):
     expires = epoch_time + time_increments_dict[incr]
     return expires
 
-
+# --------------------------------------------------------------------------------
 def package_upload_data(direction):
     global packaged_data
     packaged_data = entry_exit_dict
@@ -107,7 +111,7 @@ def package_upload_data(direction):
     print(packaged_data)
     return packaged_data
 
-
+# --------------------------------------------------------------------------------
 def put_item_data(atrmultiple, direction, channel_price):
     global item_data_dict
     expires = item_expiration('plus_minute')
@@ -132,7 +136,7 @@ def put_item_data(atrmultiple, direction, channel_price):
     print("item_data_dict", item_data_dict)
     return item_data_dict
 
-
+# --------------------------------------------------------------------------------
 def getroot(symbol):
     global root
     if len(symbol) == 5:
@@ -141,12 +145,12 @@ def getroot(symbol):
         root = symbol[:1]
     return root
 
-
+# --------------------------------------------------------------------------------
 def get_unit_size(risk, equity, last_atr, contract_size):
     unit_size = (risk / 2) * equity / last_atr / contract_size
     return unit_size
 
-
+# --------------------------------------------------------------------------------
 def make_item(data):
     """Changing float to string for dynamodb"""
     if isinstance(data, dict):
@@ -157,7 +161,8 @@ def make_item(data):
         return str(data)
     return data
 
-################################# LAMBDA HANDLER #########################################
+# --------------------------------------------------------------------------------
+# ------------------------------- LAMBDA HANDLER ---------------------------------
 def breakout_lambda(event, context):
     global last_don_lband, last_atr, last_open, last_high, last_low, last_close
     global last_tradingDay, symbol, last_volume, unit_size, breakout_days, url_payload, chart_url
@@ -176,7 +181,7 @@ def breakout_lambda(event, context):
 
     url_payload = {'criteria': {'min_volume': 400,
                                 'risk': 2.0,
-                                'equity': 25000,
+                                'equity': 250000,
                                 'breakout_days': 20,
                                 'unit_size_cutoff': 0.8}}
 
@@ -189,13 +194,13 @@ def breakout_lambda(event, context):
     url = 'https://marketdata.websol.barchart.com/getHistory.json?\
     apikey=020e9823c98a0753c62aacb0735a5226&symbol=' + market + '&type=' + duration + '&\
     startDate=20100101&maxRecords=' + maxRecords + '&order=asc'
-    # print(url)
+    print(url)
 
     myResponse = requests.get(url)
     # print(myResponse.text)
     data = json.loads(myResponse.text)
-    if data['results'] is None:
-        print(market, "no data")
+    if data['results'] is None or data['results'] == "null":
+        print(market, "no data", data['results'])
         sys.exit()
 
     # print(data['results'][0]['symbol'])
@@ -203,7 +208,7 @@ def breakout_lambda(event, context):
 
     # create data frame for pandas from results key in 'data'
     df = pd.DataFrame(data['results'])
-
+    print(df.iloc[97:])
     # check volume against criteria - exit if not met
     # **** USE VOLUME FROM PREVIOUS DAY - SOMETIMES LAST DAY'S VOLUME ISN'T AVAILABLE
     last_volume = df["volume"][len(df)-2]
@@ -230,7 +235,8 @@ def breakout_lambda(event, context):
     contract_size = float(cs.get_contract_info(root)[1])
 
     # get atr
-    atr = average_true_range(df["high"], df["low"], df["close"], n=14, fillna=True)
+    # print("atr is: ", average_true_range(df["high"], df["low"], df["close"], n=14, fillna=False))
+    atr = average_true_range(df["high"], df["low"], df["close"], n=14, fillna=False)
 
     # get last atr
     last_atr = roundto(atr[len(atr)-1], 0.0000001, 7)
@@ -262,7 +268,7 @@ def breakout_lambda(event, context):
     atr_multiple_low = roundto(delta_from_low / last_atr, 0.00001, 5)
 
 
-    if 0 <= atr_multiple_high <= 5:
+    if 0 <= atr_multiple_high <= 50:
         # print("Nearing High ATR Mulitple: {:.2f}".format(atr_multiple_high))
         #create json for dynamodb put_item
         direction = "high"
@@ -272,9 +278,12 @@ def breakout_lambda(event, context):
         # print(item_data_dict)
         response = table.put_item(Item=item_data_dict)
         print(response)
+        # write html of entry/exits
+        wf.write_file_to_s3(item_data_dict)
+
         # print('\n' *2)
 
-    if 0 <= atr_multiple_low <= 5:
+    if 0 <= atr_multiple_low <= 50:
         # print("Nearing Low ATR Multiple: {:.2f}".format(atr_multiple_low))
         direction = "low"
         get_entry_exit(direction, last_don_lband)
@@ -283,3 +292,5 @@ def breakout_lambda(event, context):
         # print(item_data_dict)
         response = table.put_item(Item=item_data_dict)
         print(response)
+        # write html of entry/exits
+        wf.write_file_to_s3(item_data_dict)

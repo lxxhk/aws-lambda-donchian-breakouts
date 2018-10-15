@@ -14,6 +14,15 @@ provider:
    - Effect: "Allow"
      Action: "dynamodb:PutItem"
      Resource: ${self:custom.breakoutTableArn}
+   - Effect: Allow
+     Action:
+       - 's3:PutObject'
+       # - 'S3:DeleteObject'
+     Resource:
+       - Fn::Join:
+         - ''
+         - - ${self:custom.writetobucketArn}
+           - '/*'
 
   environment:
     INVOKED_FUNCTION_NAME: ${self:functions.breakout_lambda.name}
@@ -25,6 +34,15 @@ custom:
   breakoutsTableName: ${file(../config.${self:provider.stage}.json):breakouts.breakoutstable}
   breakoutsBucketName: ${file(../config.${self:provider.stage}.json):breakouts.bucketfordata}
   breakoutsSymbolsFileName: ${file(../config.${self:provider.stage}.json):breakouts.keyforsymbols}
+  writetobucketArn:
+    Fn::Join:
+      - ':'
+      - - arn
+        - aws
+        - s3
+        - ''
+        - ''
+        - ${self:custom.breakoutsBucketName}
   breakoutTableArn:
     Fn::Join:
       - ':'
