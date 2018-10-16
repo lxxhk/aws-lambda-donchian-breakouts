@@ -193,6 +193,7 @@ def breakout_lambda(event, context):
     breakout_days = int(eval_criteria_dict['breakout_days'])
     equity = float(eval_criteria_dict['equity'])
     unit_size_cutoff = float(eval_criteria_dict['unit_size_cutoff'])
+    atrmultiple_test = float(eval_criteria_dict['atrmultiple_test'])
 
     url = 'https://marketdata.websol.barchart.com/getHistory.json?\
     apikey=020e9823c98a0753c62aacb0735a5226&symbol=' + market + '&type=' + duration + '&\
@@ -271,7 +272,7 @@ def breakout_lambda(event, context):
     atr_multiple_low = roundto(delta_from_low / last_atr, 0.00001, 5)
 
 
-    if 0 <= atr_multiple_high <= 50:
+    if 0 <= atr_multiple_high <= atrmultiple_test:
         # print("Nearing High ATR Mulitple: {:.2f}".format(atr_multiple_high))
         #create json for dynamodb put_item
         direction = "high"
@@ -286,7 +287,7 @@ def breakout_lambda(event, context):
 
         # print('\n' *2)
 
-    if 0 <= atr_multiple_low <= 50:
+    if 0 <= atr_multiple_low <= atrmultiple_test:
         # print("Nearing Low ATR Multiple: {:.2f}".format(atr_multiple_low))
         direction = "low"
         get_entry_exit(direction, last_don_lband)
