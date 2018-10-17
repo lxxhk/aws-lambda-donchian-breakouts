@@ -75,7 +75,7 @@ def get_entry_exit(direction, breakout_price):
             "Stop4":" %s"
     }""" % (Unit1, Unit2, Unit3, Unit4, Stop1, Stop2, Stop3, Stop4)
     entry_exit_dict = json.loads(entry_exit_str)
-    print(entry_exit_dict)
+    # print(entry_exit_dict)
     return entry_exit_dict
 
 # --------------------------------------------------------------------------------
@@ -113,7 +113,7 @@ def package_upload_data(direction):
     # print(packaged_data)
     # print()
     # packaged_data = make_item(packaged_data)
-    print(packaged_data)
+    # print(packaged_data)
     return packaged_data
 
 # --------------------------------------------------------------------------------
@@ -138,7 +138,7 @@ def put_item_data(atrmultiple, direction, channel_price):
             last_high, last_low, last_close, last_volume, expires, breakout_days)
     item_data_dict = json.loads(item_data_str)
     item_data_dict['packageddata'] = packaged_data
-    print("item_data_dict", item_data_dict)
+    # print("item_data_dict", item_data_dict)
     return item_data_dict
 
 # --------------------------------------------------------------------------------
@@ -198,7 +198,7 @@ def breakout_lambda(event, context):
     url = 'https://marketdata.websol.barchart.com/getHistory.json?\
     apikey=020e9823c98a0753c62aacb0735a5226&symbol=' + market + '&type=' + duration + '&\
     startDate=20100101&maxRecords=' + maxRecords + '&order=asc'
-    print(url)
+    # print(url)
 
     myResponse = requests.get(url)
     # print(myResponse.text)
@@ -212,7 +212,7 @@ def breakout_lambda(event, context):
 
     # create data frame for pandas from results key in 'data'
     df = pd.DataFrame(data['results'])
-    print(df.iloc[97:])
+    # print(df.iloc[97:])
     # check volume against criteria - exit if not met
     # **** USE VOLUME FROM PREVIOUS DAY - SOMETIMES LAST DAY'S VOLUME ISN'T AVAILABLE
     last_volume = df["volume"][len(df)-2]
@@ -228,7 +228,7 @@ def breakout_lambda(event, context):
     # get future's parameters
     symbol = data['results'][0]['symbol']
     root = getroot(symbol)
-    print(root)
+    # print(root)
 
     # create chart url for analysis
     chart_url = "https://www.barchart.com/futures/quotes/" + symbol + "/interactive-chart"
@@ -281,11 +281,11 @@ def breakout_lambda(event, context):
         put_item_data(atr_multiple_high, direction, last_don_hband)
         # print(item_data_dict)
         response = table.put_item(Item=item_data_dict)
-        print(response)
+        # print(response)
         # write html of entry/exits
         wf.write_file_to_s3(item_data_dict)
+    else: print(market, "atr outside high criteria")
 
-        # print('\n' *2)
 
     if 0 <= atr_multiple_low <= atrmultiple_test:
         # print("Nearing Low ATR Multiple: {:.2f}".format(atr_multiple_low))
@@ -295,6 +295,7 @@ def breakout_lambda(event, context):
         put_item_data(atr_multiple_low, direction, last_don_lband)
         # print(item_data_dict)
         response = table.put_item(Item=item_data_dict)
-        print(response)
+        # print(response)
         # write html of entry/exits
         wf.write_file_to_s3(item_data_dict)
+    else: print(market, "atr outside low criteria")

@@ -66,5 +66,6 @@ root_to_parameters = {
     'BO':parameters('Soybean Oil (P)', '600', 'lbs', '0.01', '6', 'CBOT', '<$2,000', 'BO*1'),
     'S':parameters('Soybeans (P)', '50', 'bushels', '0.25', '50', 'CBOT', '>$2,000', 'S*1'),
     'SF':parameters('Swiss Franc (P)', '125000', 'Swiss F', '0.0001', '12.5', 'CME', '<$2,000', 'SF*1'),
-    'W':parameters('Wheat (P)', '50', 'BU', '0.25', '12.5', 'CBOT', '<$2,000', 'W*1')
+    'W':parameters('Wheat (P)', '50', 'BU', '0.25', '12.5', 'CBOT', '<$2,000', 'W*1'),
+    'ES':parameters('E-Mini S&P 500', '50', '$', '0.25', '12.5', 'CME', '<$2,000', 'ES*1')
 }
