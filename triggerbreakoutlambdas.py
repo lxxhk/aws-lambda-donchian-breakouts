@@ -24,7 +24,7 @@ def trigger_breakout_lambdas(event, context):
     invoked_function_name = os.environ['INVOKED_FUNCTION_NAME']
 
     for market in market_list:
-        print(market)
+        # print(market)
         # data transfered via Payload must be in json formatting
         # this passes one market at a time to a invoke a new lambda function
         data = {"market" : market, "maxRecords" : maxRecords, "type" : duration}

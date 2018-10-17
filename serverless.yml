@@ -62,10 +62,15 @@ functions:
     handler: triggerbreakoutlambdas.trigger_breakout_lambdas
     description: lambda function to trigger individual breakout lambda functions
     name: ${self:service}-${self:provider.stage}-trigger_breakout_lambdas
+    timeout: 6 # Timeout for this specific function.  Overrides the default if set in Provider
+    memorySize: 1024 # memorySize for this specific function.
+
   breakout_lambda:
     handler: breakoutlambda.breakout_lambda
     description: lambda function to calculate and alert pending breakouts
     name: ${self:service}-${self:provider.stage}-breakout_lambda
+    timeout: 6 # Timeout for this specific function.  Overrides the default if set in Provider
+    memorySize: 1024 # memorySize for this specific function.
 
 plugins:
   - serverless-python-requirements
