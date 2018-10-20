@@ -58,8 +58,9 @@ class writedata:
         html_conc = """<br></br><caption><b>%s</b></caption><br></br>
                         <br></br><caption><b>%s</b></caption><br></br>""" % (table1_html, table2_html)
 
-        file_name = pdata['tradingDay'] + '_' + pdata['symbol'] + '_' + pdata['direction'] + ".html"
-        key = "htmlfiles/" + file_name
+        file_name = trade_info['tradingday'] + '_' + trade_info['symbol'] + '_' + trade_info['breakoutdays'] + '_' + trade_info['direction']+ ".html"
+
+        key = "htmlfiles/breakouts/" + file_name
 
         file_name_path = "/tmp/" + file_name
         with open(file_name_path, 'w+') as file:

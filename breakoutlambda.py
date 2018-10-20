@@ -100,10 +100,10 @@ def package_upload_data(direction):
     packaged_data['risk'] = str(risk)
     packaged_data['min_volume'] = str(min_volume)
     packaged_data['equity'] = str(equity)
-    packaged_data['breakout_days'] = str(breakout_days)
-    packaged_data['unit_size_cutoff'] = str(unit_size_cutoff)
+    packaged_data['breakoutdays'] = str(breakout_days)
+    packaged_data['unitsizecutoff'] = str(unit_size_cutoff)
     packaged_data['direction'] = direction
-    packaged_data['tradingDay'] = last_tradingDay
+    packaged_data['tradingday'] = last_tradingDay
     packaged_data['symbol'] = symbol
     packaged_data['volume'] = str(last_volume)
     packaged_data['unit_size'] = str(unit_size)
@@ -138,7 +138,7 @@ def put_item_data(atrmultiple, direction, channel_price):
             last_high, last_low, last_close, last_volume, expires, breakout_days)
     item_data_dict = json.loads(item_data_str)
     item_data_dict['packageddata'] = packaged_data
-    # print("item_data_dict", item_data_dict)
+    print("item_data_dict", item_data_dict)
     return item_data_dict
 
 # --------------------------------------------------------------------------------

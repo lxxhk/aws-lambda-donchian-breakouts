@@ -17,12 +17,27 @@ provider:
    - Effect: Allow
      Action:
        - 's3:PutObject'
-       # - 'S3:DeleteObject'
+       - 's3:GetObject'
      Resource:
        - Fn::Join:
          - ''
          - - ${self:custom.writetobucketArn}
            - '/*'
+   - Effect: Allow
+     Action:
+       - 's3:ListBucket'
+     Resource: ${self:custom.writetobucketArn}
+   # - Effect: Deny # for sms messaging, need to deny all sns, then allow below
+   #   Action:
+   #     - 'sns:Publish'
+   #   Resource:
+   #     - "arn:aws:sns:*:*:*"
+   - Effect: Allow
+     Action:
+       - 'sns:Publish'
+     Resource:
+       # - ${self:custom.breakoutTopicArn}
+       - "*"
 
   environment:
     INVOKED_FUNCTION_NAME: ${self:functions.breakout_lambda.name}
@@ -30,12 +45,26 @@ provider:
     BREAKOUT_BUCKETDATA_NAME: ${self:custom.breakoutsBucketName}
     BREAKOUT_SYMBOLS_KEY_NAME: ${self:custom.breakoutsSymbolsFileName}
     BREAKOUT_CRITERIA_KEY_NAME: ${self:custom.breakoutsCriteriaFileName}
+    # BREAKOUT_TOPIC_ARN: ${self:custom.breakoutTopicArn}
+    BREAKOUT_TOPIC_ARN: "arn:aws:sns:us-east-1:117126657583:SendBreakoutEmails"
+    BREAKOUT_PHONE_NUMBER: ${self:custom.breakoutsPhoneNumber}
 
 custom:
   breakoutsTableName: ${file(../config.${self:provider.stage}.json):breakouts.breakoutstable}
   breakoutsBucketName: ${file(../config.${self:provider.stage}.json):breakouts.bucketfordata}
   breakoutsSymbolsFileName: ${file(../config.${self:provider.stage}.json):breakouts.keyforsymbols}
   breakoutsCriteriaFileName: ${file(../config.${self:provider.stage}.json):breakouts.keyforcriteria}
+  breakoutsTopic: ${file(../config.${self:provider.stage}.json):breakouts.breakouttopic}
+  breakoutsPhoneNumber: ${file(../config.${self:provider.stage}.json):breakouts.telnumber}
+  breakoutTopicArn:
+    Fn::Join:
+      - ':'
+      - - arn
+        - aws
+        - sns
+        - Ref: AWS::Region
+        - Ref: AWS::AccountId
+        - ${self:custom.breakoutsTopic}
   writetobucketArn:
     Fn::Join:
       - ':'
@@ -57,6 +86,22 @@ custom:
   pythonRequirements:
     pythonBin: /usr/local/bin/python3.6m
 
+# resources:
+#   Resources:
+#   {
+#     "Version": "2012-10-17",
+#     "Statement": [
+#         {
+#             "Action": [
+#                 "sns:*"
+#             ],
+#             "Effect": "Allow",
+#             "Resource": "*"
+#         }
+#     ]
+# }
+
+
 functions:
   trigger_breakout_lambdas:
     handler: triggerbreakoutlambdas.trigger_breakout_lambdas
@@ -64,11 +109,16 @@ functions:
     name: ${self:service}-${self:provider.stage}-trigger_breakout_lambdas
     timeout: 6 # Timeout for this specific function.  Overrides the default if set in Provider
     memorySize: 1024 # memorySize for this specific function.
-
   breakout_lambda:
     handler: breakoutlambda.breakout_lambda
     description: lambda function to calculate and alert pending breakouts
     name: ${self:service}-${self:provider.stage}-breakout_lambda
+    timeout: 6 # Timeout for this specific function.  Overrides the default if set in Provider
+    memorySize: 1024 # memorySize for this specific function.
+  breakout_notifications:
+    handler: snsbreakoutnotifications.send_breakout_notifications
+    description: lambda function to capture breakouts and email or text messages
+    name: ${self:service}-${self:provider.stage}-send_breakout_notifications
     timeout: 6 # Timeout for this specific function.  Overrides the default if set in Provider
     memorySize: 1024 # memorySize for this specific function.
 
