@@ -1,4 +1,4 @@
-
+"""module to write html files to s3"""
 import mimetypes
 import os
 import pandas as pd
@@ -6,14 +6,16 @@ import boto3
 
 
 class writedata:
-
+    """create html and write to s3"""
+    # pass in all_data from breakout function
     def write_file_to_s3(self, all_data):
-        """using temp directory in lambda to store and then write to s3"""
+        """create html and write to s3"""
         s3sr = boto3.resource('s3')
-        s3sc = boto3.client('s3')
+        # s3sc = boto3.client('s3')
         bucket = os.environ['BREAKOUT_BUCKETDATA_NAME']
         bucketobj = s3sr.Bucket(bucket)
 
+        # parse entry/exits
         pdata = all_data['packageddata']
         trades = {'': ['1st Unit', '2nd Unit', '3rd Unit', '4th Unit'],
                   'Buy Stop': [pdata['Unit1'], pdata['Unit2'], pdata['Unit3'], pdata['Unit4']],
@@ -23,45 +25,77 @@ class writedata:
                   'Sell Stop4': [pdata['Stop1'], pdata['Stop2'], pdata['Stop3'], pdata['Stop4']]
                  }
 
+        # create dataframe for easy transformatin to html
         df = pd.DataFrame.from_dict(trades)
+
+        # change headings if breakout is low
         if all_data['direction'] == "low":
             df.columns = ['', 'Sell Stop', 'Buy Stop1', 'Buy Stop2', 'Buy Stop3', 'Buy Stop4']
 
         # writing file to s3 using the lamba temp directory and panda to_html function
-
         # table1_html = "/tmp/table1.html"
         # df.to_html(table1_html)
+
+        # create the buy/sell html table for market
         table1_html = df.to_html(index=False, border=2)
         table1_html = table1_html.replace('<tr>', '<tr align="center">')
 
-        # new data set to add to second html file
-        trade_info = {}
-        trade_info['tradingday'] = all_data['tradingday']
-        trade_info['direction'] = all_data['direction']
-        trade_info['symbol'] = all_data['symbol']
-        trade_info['breakoutprice'] = all_data['breakoutprice']
-        trade_info['breakoutdays'] = all_data['breakoutdays']
-        trade_info['equity'] = all_data['packageddata']['equity']
-        trade_info['tick'] = all_data['packageddata']['tick']
-        trade_info['unitsize'] = all_data['packageddata']['unit_size']
-        trade_info['charturl'] = all_data['packageddata']['chart_url']
-        # print(trade_info)
+        # create second table of data relating to analysis
+        table2_html = """<br></br>
+                        Trading Day = %s
+                        <br>Breakout Price = %s </br>
+                        Tick = %s
+                        <br>Breakout Days = %s </br>
+                        Equity = %s
+                        <br>Unit Size = %s </br>
+                        ATR = %s
+                        <br><a href="%s" target="_blank">%s</a></br>
+                    """ %(all_data['tradingday'], all_data['breakoutprice'], all_data['packageddata']['tick'],
+                          all_data['breakoutdays'], all_data['packageddata']['equity'],
+                          all_data['packageddata']['unit_size'], all_data['packageddata']['atr'],
+                          all_data['packageddata']['chart_url'],
+                          all_data['symbol'] + "_" + all_data['direction'])
 
-        df_info = pd.DataFrame(list(trade_info.items()))
-        df_info.columns = ["Item", "Value"]
+        # starting xml with styling the entry/exit table
+        html_start = """<!DOCTYPE html>
+                        <html lang="en" dir="ltr">
+                          <head>
+                            <meta charset="utf-8">
+                            <title></title>
+                            <style>
+                                  table, th, td {
+                                      border: 1px solid black;
+                                      height: 22px;
+                                      padding: 3px;
+                                  }
 
-        # table2_html = "/tmp/table2.html"
-        # df_info.to_html(table2_html)
+                                  table {
+                                      border-collapse: collapse;
+                                      height: 20px;
+                                  }
+                                  </style>
+                            </head>
+                          <body>
+                          <strong> %s nearing %s </strong><br></br>""" % (all_data['symbol'], all_data['direction'])
 
-        table2_html = df_info.to_html(index=False, border=1)
+        # place a chart of the market in the html document
+        html_chart = """<br></br><img class="chartimg" id="chartImg" src="%s">""" % (all_data['packageddata']['chart_url'])
 
-        html_conc = """<br></br><caption><b>%s</b></caption><br></br>
-                        <br></br><caption><b>%s</b></caption><br></br>""" % (table1_html, table2_html)
+        # closing html tags
+        html_end = """</body></html>"""
 
-        file_name = trade_info['tradingday'] + '_' + trade_info['symbol'] + '_' + trade_info['breakoutdays'] + '_' + trade_info['direction']+ ".html"
+        # put all the html pieces together
+        html_conc = html_start + """<caption><b>%s</b></caption>
+                                    <caption><b>%s</b></caption><br></br>
+                                    %s """ % (table1_html, table2_html, html_chart) + html_end
 
+        # name the file to be saved
+        file_name = all_data['tradingday'] + '_' + all_data['symbol'] + '_' + all_data['breakoutdays'] + '_' + all_data['direction']+ ".html"
+
+        # s3 key to store the file
         key = "htmlfiles/breakouts/" + file_name
 
+        # write the html and store the file using lambda tmp directory
         file_name_path = "/tmp/" + file_name
         with open(file_name_path, 'w+') as file:
             file.write(html_conc)
@@ -74,20 +108,4 @@ class writedata:
         response = bucketobj.upload_file(str(file_name_path),
                                          str(key), ExtraArgs={'ContentType': content_type})
 
-        print(response)
-
-        # --------------------------------------------------------------------------------
-        # writing file to s3 using the lamba temp directory and open file method
-        # not used but works
-        # file_name = pdata['tradingDay'] + pdata['symbol'] + pdata['direction'] + ".json"
-        # lambda_path = "/tmp/" + file_name
-        # key = "jsonfiles/" + file_name
-        #
-        # with open(lambda_path, 'w+') as file:
-        #     file.write(str(all_data))
-        #     file.close()
-        #
-        # response = bucketobj.upload_file(str(lambda_path),
-        #                                  str(key), ExtraArgs={'ContentType': content_type})
-        #
         # print(response)

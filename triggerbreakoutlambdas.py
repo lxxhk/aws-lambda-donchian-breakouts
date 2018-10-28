@@ -12,7 +12,7 @@ key =  os.environ['BREAKOUT_SYMBOLS_KEY_NAME']
 # first function used to call another lambda function
 # this function will be driven from a cron job nightly (watch UTC time zone???)
 def trigger_breakout_lambdas(event, context):
-
+    # read list of markets to analyze - file in s3 - read line by line
     obj = s3sr.Object(bucket, key)
     data = obj.get()['Body'].read().decode('utf-8')
 
@@ -23,6 +23,7 @@ def trigger_breakout_lambdas(event, context):
 
     invoked_function_name = os.environ['INVOKED_FUNCTION_NAME']
 
+    # this lambda function invokes another lambda function
     for market in market_list:
         # print(market)
         # data transfered via Payload must be in json formatting
@@ -31,8 +32,8 @@ def trigger_breakout_lambdas(event, context):
         # print(data)
         response = client.invoke(
             FunctionName=invoked_function_name,
-            # InvocationType='RequestResponse',
-            InvocationType='Event',
+            # InvocationType='RequestResponse', # synchornous - waits for response
+            InvocationType='Event', # asynch - much faster - doesn't wait for response
             Payload=json.dumps(data)
         )
 

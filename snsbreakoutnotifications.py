@@ -21,6 +21,9 @@ def send_breakout_notifications(event, context):
     # bucket url
     base_url = 'https://s3.amazonaws.com/' + bucket + '/'
     today_date_str = datetime.now().strftime("%Y-%m-%d")
+    # for testing may need to hardcode datestring
+    # today_date_str = '2018-10-19'
+
     # specific prefixes for breakouts files
     prefix = 'htmlfiles/breakouts'
 
@@ -32,12 +35,11 @@ def send_breakout_notifications(event, context):
 
     # create list of html file urls for json messaging in emails
     # only for current day's files based on date in key name
-
     for page in page_iterator:
         # if page['KeyCount'] == 0:  ## this also works
         if page.get('Contents') is None:
-            print(page.get('Contents'))
-            print("no files today")
+            # print(page.get('Contents'))
+            # print("no files today")
             keyurl_list = ['no files', 'today']
             response = snssc.publish(
                                         PhoneNumber=phonenumber,
@@ -53,18 +55,22 @@ def send_breakout_notifications(event, context):
         # use \\n to escape line break
         keyurl_str = '\\n\\n'.join(keyurl_list)
         keyurl_str = "Breakouts to review:\\n\\n" + keyurl_str + "\\n"
-        print(keyurl_str)
+        # print(keyurl_str)
 
+        # using json format as messaging is differnent for each protocol
         message = """{
                 "default": "Nothing to report",
                 "email": "%s",
                 "sms": "new markets to check out: %s"
                 }""" % (keyurl_str, str(len(keyurl_list)))
 
+        # make it json format
         mm = json.loads(message)
 
+        # subject line for email
         subject = str(len(keyurl_list)) + ' breakouts to review'
 
+        # publish to topic, then each subscriber gets the email
         response = snssc.publish(
                                 TopicArn=breakout_topic_arn,
                                 # TargetArn='string',

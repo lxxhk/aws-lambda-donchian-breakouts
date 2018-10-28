@@ -21,7 +21,7 @@ class futurespecs:
         return letter_to_month['x']
 
 
-
+# headings for data table below
 parameters = namedtuple('parameters', ['commodity', 'contract_size', 'unit', 'tick',
                         'dollarpertick', 'exchange', 'margin', 'apiname'])
 

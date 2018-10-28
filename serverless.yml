@@ -28,6 +28,7 @@ provider:
        - 's3:ListBucket'
      Resource: ${self:custom.writetobucketArn}
    # - Effect: Deny # for sms messaging, need to deny all sns, then allow below
+                    # this didn't work. text was denied still
    #   Action:
    #     - 'sns:Publish'
    #   Resource:
@@ -37,7 +38,7 @@ provider:
        - 'sns:Publish'
      Resource:
        # - ${self:custom.breakoutTopicArn}
-       - "*"
+       - "*" # need to use * in order to get sms/text to work
 
   environment:
     INVOKED_FUNCTION_NAME: ${self:functions.breakout_lambda.name}
@@ -45,9 +46,9 @@ provider:
     BREAKOUT_BUCKETDATA_NAME: ${self:custom.breakoutsBucketName}
     BREAKOUT_SYMBOLS_KEY_NAME: ${self:custom.breakoutsSymbolsFileName}
     BREAKOUT_CRITERIA_KEY_NAME: ${self:custom.breakoutsCriteriaFileName}
-    # BREAKOUT_TOPIC_ARN: ${self:custom.breakoutTopicArn}
-    BREAKOUT_TOPIC_ARN: "arn:aws:sns:us-east-1:117126657583:SendBreakoutEmails"
+    BREAKOUT_TOPIC_ARN: ${self:custom.breakoutTopicArn}
     BREAKOUT_PHONE_NUMBER: ${self:custom.breakoutsPhoneNumber}
+    API_KEY: ${self:custom.apikey}
 
 custom:
   breakoutsTableName: ${file(../config.${self:provider.stage}.json):breakouts.breakoutstable}
@@ -56,6 +57,7 @@ custom:
   breakoutsCriteriaFileName: ${file(../config.${self:provider.stage}.json):breakouts.keyforcriteria}
   breakoutsTopic: ${file(../config.${self:provider.stage}.json):breakouts.breakouttopic}
   breakoutsPhoneNumber: ${file(../config.${self:provider.stage}.json):breakouts.telnumber}
+  apikey: ${file(../config.${self:provider.stage}.json):breakouts.apikey}
   breakoutTopicArn:
     Fn::Join:
       - ':'
@@ -85,21 +87,6 @@ custom:
         - table/${self:custom.breakoutsTableName}
   pythonRequirements:
     pythonBin: /usr/local/bin/python3.6m
-
-# resources:
-#   Resources:
-#   {
-#     "Version": "2012-10-17",
-#     "Statement": [
-#         {
-#             "Action": [
-#                 "sns:*"
-#             ],
-#             "Effect": "Allow",
-#             "Resource": "*"
-#         }
-#     ]
-# }
 
 
 functions:
