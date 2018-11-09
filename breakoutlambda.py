@@ -11,6 +11,7 @@ import requests
 import boto3
 from futuresdefinitions import futurespecs
 from writehtml import writedata
+from writechartimage import writeimage
 
 # donchian channel breakout analysis - criteria passed as 20 day adn 55 day
 dbtable = os.environ['BREAKOUT_DBTABLE_NAME']
@@ -33,6 +34,9 @@ cs = futurespecs()
 
 # initialize object for writing html of entry/exit to s3
 wf = writedata()
+
+# initialize object for writing stock chart image
+wi = writeimage()
 
 # --------------------------------------------------------------------------------
 def roundto(number, base, places):
@@ -193,7 +197,7 @@ def breakout_lambda(event, context):
     duration = event['type']
 
     # read file from s3 that has criteria to evaluate
-    obj =s3sr.Object(bucket_criteria, key_criteria)
+    obj = s3sr.Object(bucket_criteria, key_criteria)
     criteria_list = obj.get()['Body'].read().decode('utf-8')
     eval_criteria_dict_json = json.loads(criteria_list)
 
@@ -239,14 +243,9 @@ def breakout_lambda(event, context):
         root = getroot(symbol)
         # print(root)
 
-        # create chart url for analysis
-        # this isn't working correctly ###############################
-        if breakout_days == 55:
-            chart_params = 'i=t81015210860&r=1540561537632'
-        else:
-            chart_params = 'i=t10091245104&r=1540561505453'
-
-        chart_url ="https://stockcharts.com/c-sc/sc?s=%5E" + symbol + "&amp;p=D&amp;b=8&amp;g=0&amp;" + chart_params
+        # create chart image url for analysis and input into html files
+        bucket = os.environ['BREAKOUT_BUCKETDATA_NAME']
+        chart_url = 'https://s3.amazonaws.com/' + bucket + '/chartimages/' + symbol + '.jpg'
 
         # create object from imported class
         cs = futurespecs()
@@ -299,6 +298,7 @@ def breakout_lambda(event, context):
             # print(response)
             # write html of entry/exits
             wf.write_file_to_s3(item_data_dict)
+            wi.download_and_write_file_to_s3(symbol)
         # else: print(market, "atr outside high criteria")
 
 
@@ -313,4 +313,5 @@ def breakout_lambda(event, context):
             # print(response)
             # write html of entry/exits
             wf.write_file_to_s3(item_data_dict)
+            wi.download_and_write_file_to_s3(symbol)
         # else: print(market, "atr outside low criteria")

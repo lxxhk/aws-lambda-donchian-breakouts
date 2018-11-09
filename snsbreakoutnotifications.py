@@ -1,16 +1,15 @@
-from time import *
-from datetime import datetime
-from dateutil.tz import tzutc
-import boto3
-import json
+"""Send text messaging to subscribed SNS topic"""
 import os, sys
+import json
+from datetime import datetime
+import boto3
 
 # client = boto3.client('lambda', region_name="us-east-1")
 s3sr = boto3.resource('s3')
 # s3sc = boto3.client('s3')
 snssc = boto3.client('sns')
 
-bucket =  os.environ['BREAKOUT_BUCKETDATA_NAME']
+bucket = os.environ['BREAKOUT_BUCKETDATA_NAME']
 breakout_topic_arn = os.environ['BREAKOUT_TOPIC_ARN']
 phonenumber = os.environ['BREAKOUT_PHONE_NUMBER']
 
@@ -22,7 +21,7 @@ def send_breakout_notifications(event, context):
     base_url = 'https://s3.amazonaws.com/' + bucket + '/'
     today_date_str = datetime.now().strftime("%Y-%m-%d")
     # for testing may need to hardcode datestring
-    # today_date_str = '2018-10-19'
+    today_date_str = '2018-11-02'
 
     # specific prefixes for breakouts files
     prefix = 'htmlfiles/breakouts'
@@ -30,8 +29,8 @@ def send_breakout_notifications(event, context):
     # limit to prefix
     paginator = s3sr.meta.client.get_paginator('list_objects_v2')
     page_iterator = paginator.paginate(Bucket=bucket,
-                                    Prefix=prefix,
-                                    PaginationConfig={'MaxItems': 1000})
+                                       Prefix=prefix,
+                                       PaginationConfig={'MaxItems': 1000})
 
     # create list of html file urls for json messaging in emails
     # only for current day's files based on date in key name
@@ -42,13 +41,13 @@ def send_breakout_notifications(event, context):
             # print("no files today")
             keyurl_list = ['no files', 'today']
             response = snssc.publish(
-                                        PhoneNumber=phonenumber,
-                                        Message="No breakouts to review"
-                                    )
+                PhoneNumber=phonenumber,
+                Message="No breakouts to review"
+                )
             sys.exit()
         else:
-            # Note object key parse at [20:30] specific to prefix = 'htmlfiles/breakouts'
-            keyurl_list = [base_url + obj['Key'] for obj in page.get('Contents') if obj['Key'][20:30] == today_date_str]
+            # parsing out date to get current breakout htmls
+            keyurl_list = [base_url + obj['Key'] for obj in page.get('Contents') if obj['Key'].split('/')[-1].split('_')[0] == today_date_str]
 
         print(keyurl_list)
 
@@ -72,9 +71,9 @@ def send_breakout_notifications(event, context):
 
         # publish to topic, then each subscriber gets the email
         response = snssc.publish(
-                                TopicArn=breakout_topic_arn,
-                                # TargetArn='string',
-                                Message=json.dumps(mm),
-                                Subject=subject,
-                                MessageStructure='json'
-                            )
+            TopicArn=breakout_topic_arn,
+            # TargetArn='string',
+            Message=json.dumps(mm),
+            Subject=subject,
+            MessageStructure='json'
+        )

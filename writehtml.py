@@ -79,7 +79,7 @@ class writedata:
                           <strong> %s nearing %s </strong><br></br>""" % (all_data['symbol'], all_data['direction'])
 
         # place a chart of the market in the html document
-        html_chart = """<br></br><img class="chartimg" id="chartImg" src="%s">""" % (all_data['packageddata']['chart_url'])
+        html_chart = """<br></br><img src="%s">""" % (all_data['packageddata']['chart_url'])
 
         # closing html tags
         html_end = """</body></html>"""
