@@ -86,7 +86,7 @@ custom:
         - Ref: AWS::AccountId
         - table/${self:custom.breakoutsTableName}
   pythonRequirements:
-    pythonBin: /usr/local/bin/python3.6m
+    pythonBin: /usr/local/bin/python3.6
 
 
 functions:

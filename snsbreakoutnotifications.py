@@ -21,7 +21,7 @@ def send_breakout_notifications(event, context):
     base_url = 'https://s3.amazonaws.com/' + bucket + '/'
     today_date_str = datetime.now().strftime("%Y-%m-%d")
     # for testing may need to hardcode datestring
-    today_date_str = '2018-11-02'
+    # today_date_str = '2018-11-12'
 
     # specific prefixes for breakouts files
     prefix = 'htmlfiles/breakouts'
