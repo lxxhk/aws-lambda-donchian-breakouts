@@ -42,22 +42,17 @@ provider:
 
   environment:
     INVOKED_FUNCTION_NAME: ${self:functions.breakout_lambda.name}
-    BREAKOUT_DBTABLE_NAME: ${self:custom.breakoutsTableName}
-    BREAKOUT_BUCKETDATA_NAME: ${self:custom.breakoutsBucketName}
-    BREAKOUT_SYMBOLS_KEY_NAME: ${self:custom.breakoutsSymbolsFileName}
-    BREAKOUT_CRITERIA_KEY_NAME: ${self:custom.breakoutsCriteriaFileName}
+    BREAKOUT_DBTABLE_NAME: ${file(../config.${self:provider.stage}.json):breakouts.breakoutstable}
+    BREAKOUT_BUCKETDATA_NAME: ${file(../config.${self:provider.stage}.json):breakouts.bucketfordata}
+    BREAKOUT_SYMBOLS_KEY_NAME: ${file(../config.${self:provider.stage}.json):breakouts.keyforsymbols}
+    BREAKOUT_CRITERIA_KEY_NAME: ${file(../config.${self:provider.stage}.json):breakouts.keyforcriteria}
+    BREAKOUT_SNS_DATE_KEY_NAME: ${file(../config.${self:provider.stage}.json):breakouts.keyforsnsdate}
     BREAKOUT_TOPIC_ARN: ${self:custom.breakoutTopicArn}
-    BREAKOUT_PHONE_NUMBER: ${self:custom.breakoutsPhoneNumber}
-    API_KEY: ${self:custom.apikey}
+    BREAKOUT_PHONE_NUMBER: ${file(../config.${self:provider.stage}.json):breakouts.telnumber}
+    API_KEY: ${file(../config.${self:provider.stage}.json):breakouts.apikey}
 
 custom:
-  breakoutsTableName: ${file(../config.${self:provider.stage}.json):breakouts.breakoutstable}
-  breakoutsBucketName: ${file(../config.${self:provider.stage}.json):breakouts.bucketfordata}
-  breakoutsSymbolsFileName: ${file(../config.${self:provider.stage}.json):breakouts.keyforsymbols}
-  breakoutsCriteriaFileName: ${file(../config.${self:provider.stage}.json):breakouts.keyforcriteria}
   breakoutsTopic: ${file(../config.${self:provider.stage}.json):breakouts.breakouttopic}
-  breakoutsPhoneNumber: ${file(../config.${self:provider.stage}.json):breakouts.telnumber}
-  apikey: ${file(../config.${self:provider.stage}.json):breakouts.apikey}
   breakoutTopicArn:
     Fn::Join:
       - ':'
@@ -75,7 +70,7 @@ custom:
         - s3
         - ''
         - ''
-        - ${self:custom.breakoutsBucketName}
+        - ${file(../config.${self:provider.stage}.json):breakouts.bucketfordata}
   breakoutTableArn:
     Fn::Join:
       - ':'
@@ -84,7 +79,7 @@ custom:
         - dynamodb
         - Ref: AWS::Region
         - Ref: AWS::AccountId
-        - table/${self:custom.breakoutsTableName}
+        - table/${file(../config.${self:provider.stage}.json):breakouts.breakoutstable}
   pythonRequirements:
     pythonBin: /usr/local/bin/python3.6
 
@@ -94,19 +89,25 @@ functions:
     handler: triggerbreakoutlambdas.trigger_breakout_lambdas
     description: lambda function to trigger individual breakout lambda functions
     name: ${self:service}-${self:provider.stage}-trigger_breakout_lambdas
-    timeout: 6 # Timeout for this specific function.  Overrides the default if set in Provider
+    timeout: 60 # Timeout for this specific function.  Overrides the default if set in Provider
     memorySize: 1024 # memorySize for this specific function.
   breakout_lambda:
     handler: breakoutlambda.breakout_lambda
     description: lambda function to calculate and alert pending breakouts
     name: ${self:service}-${self:provider.stage}-breakout_lambda
-    timeout: 6 # Timeout for this specific function.  Overrides the default if set in Provider
+    timeout: 10 # Timeout for this specific function.  Overrides the default if set in Provider
     memorySize: 1024 # memorySize for this specific function.
   breakout_notifications:
     handler: snsbreakoutnotifications.send_breakout_notifications
     description: lambda function to capture breakouts and email or text messages
     name: ${self:service}-${self:provider.stage}-send_breakout_notifications
-    timeout: 6 # Timeout for this specific function.  Overrides the default if set in Provider
+    timeout: 10 # Timeout for this specific function.  Overrides the default if set in Provider
+    memorySize: 1024 # memorySize for this specific function.
+  send_datefile_to_s3:
+    handler: createdatetotest.send_datefile_to_s3
+    description: lambda function to send txt file to s3 with date for sns notifications
+    name: ${self:service}-${self:provider.stage}-send_datefile_to_s3
+    timeout: 10 # Timeout for this specific function.  Overrides the default if set in Provider
     memorySize: 1024 # memorySize for this specific function.
 
 plugins:
